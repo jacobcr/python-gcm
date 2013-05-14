@@ -1,5 +1,5 @@
-import urllib
-import urllib2
+import human_curl as requests
+from human_curl import exceptions
 import json
 from collections import defaultdict
 import time
@@ -62,15 +62,14 @@ class GCM(object):
         self.api_key = api_key
         self.url = url
         if proxy:
-            if isinstance(proxy,basestring):
+            if isinstance(proxy, basestring):
+                # from 'http://hostname:port'
+                # to ('http',('hostname', port))
                 protocol = url.split(':')[0]
-                proxy={protocol:proxy}
+                ip, port = proxy.split('/')[-1].split(':')
+                proxy= (protocol, (ip, int(port)))
 
-            auth = urllib2.HTTPBasicAuthHandler()
-            opener = urllib2.build_opener(urllib2.ProxyHandler(proxy), auth, urllib2.HTTPHandler)
-            urllib2.install_opener(opener)
-
-
+        self.proxy = proxy
     def construct_payload(self, registration_ids, data=None, collapse_key=None,
                             delay_while_idle=False, time_to_live=None, is_json=True):
         """
@@ -126,30 +125,22 @@ class GCM(object):
 
         headers = {
             'Authorization': 'key=%s' % self.api_key,
+            'Content-Type': 'application/json'
         }
-        # Default Content-Type is defaulted to application/x-www-form-urlencoded;charset=UTF-8
-        if is_json:
-            headers['Content-Type'] = 'application/json'
-
-        if not is_json:
-            data = urllib.urlencode(data)
-        req = urllib2.Request(self.url, data, headers)
 
         try:
-            response = urllib2.urlopen(req).read()
-        except urllib2.HTTPError as e:
-            if e.code == 400:
-                raise GCMMalformedJsonException("The request could not be parsed as JSON")
-            elif e.code == 401:
-                raise GCMAuthenticationException("There was an error authenticating the sender account")
-            elif e.code == 503:
-                raise GCMUnavailableException("GCM service is unavailable")
-        except urllib2.URLError as e:
-            raise GCMConnectionException("There was an internal error in the GCM server while trying to process the request")
+            response = requests.post(self.url, data, headers=headers, proxy=self.proxy)
+        except exceptions.CurlError:
+            raise GCMConnectionException("There was an internal error in the GCM server or in the network while trying to process the request")
 
-        if is_json:
-            response = json.loads(response)
-        return response
+        if response.status_code == 400:
+            raise GCMMalformedJsonException("The request could not be parsed as JSON")
+        elif response.status_code == 401:
+            raise GCMAuthenticationException("There was an error authenticating the sender account")
+        elif response.status_code == 503:
+            raise GCMUnavailableException("GCM service is unavailable")
+
+        return json.loads(response.content)
 
     def raise_error(self, error):
         if error == 'InvalidRegistration':
