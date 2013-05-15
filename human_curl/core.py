@@ -398,7 +398,7 @@ class Request(object):
         if getattr(opener, "dirty", True):
             opener = self.clean_opener(opener)
 
-        logger.debug("Open url: %s" % url)
+        #logger.debug("Open url: %s" % url)
         opener.setopt(pycurl.URL, url)
         opener.setopt(pycurl.NOSIGNAL, 1)
 
@@ -412,30 +412,30 @@ class Request(object):
             opener.unsetopt(pycurl.USERPWD)
 
         if self._headers:
-            logger.debug("Setup custom headers %s" %
-                         "\r\n".join(["%s: %s" % (f, v) for f, v
-                                      in CaseInsensitiveDict(self._headers).iteritems()]))
+            #logger.debug("Setup custom headers %s" %
+            #             "\r\n".join(["%s: %s" % (f, v) for f, v
+            #                          in CaseInsensitiveDict(self._headers).iteritems()]))
             opener.setopt(pycurl.HTTPHEADER, ["%s: %s" % (capwords(f, "-"), v) for f, v
                                               in CaseInsensitiveDict(self._headers).iteritems()])
 
         # Option -L  Follow  "Location: "  hints
         if self._allow_redirects is True:
-            logger.debug("Allow redirects")
+            #logger.debug("Allow redirects")
             opener.setopt(pycurl.FOLLOWLOCATION, self._allow_redirects)
             if self._max_redirects:
                 opener.setopt(pycurl.MAXREDIRS, self._max_redirects)
 
         # Set timeout for a retrieving an object
         if self._timeout is not None:
-            logger.debug("Set timeout: %s" % self._timeout)
+            #logger.debug("Set timeout: %s" % self._timeout)
             opener.setopt(pycurl.TIMEOUT, self._timeout)
         if self._connection_timeout is not None:
-            logger.debug("Set connect timeout: %s" % self._timeout)
+            #logger.debug("Set connect timeout: %s" % self._timeout)
             opener.setopt(pycurl.CONNECTTIMEOUT, self._connection_timeout)
 
         # Setup debug output write function
         if isinstance(self._debug_curl, FunctionType):
-            logger.debug("Setup %s as debug function" % self._debug_curl.__name__)
+            #logger.debug("Setup %s as debug function" % self._debug_curl.__name__)
             opener.setopt(pycurl.VERBOSE, 1)
             opener.setopt(pycurl.DEBUGFUNCTION, self._debug_curl)
         elif self._debug_curl is True:
@@ -456,7 +456,7 @@ class Request(object):
 
         # Setup proxy for request
         if self._proxy is not None:
-            logger.debug("Use proxies %s - %s" % self._proxy)
+            #logger.debug("Use proxies %s - %s" % self._proxy)
             if len(self._proxy) > 2:
                 proxy_type, proxy_addr, proxy_auth = self._proxy
             else:
@@ -476,7 +476,7 @@ class Request(object):
                 else:
                     raise InterfaceError("Proxy auth data must be tuple")
 
-        logger.debug("Setup user agent %s" % self.user_agent)
+        #logger.debug("Setup user agent %s" % self.user_agent)
         opener.setopt(pycurl.USERAGENT, self.user_agent)
 
         if self._validate_cert not in (None, False):
@@ -555,8 +555,8 @@ class Request(object):
                 opener.setopt(opener.HTTPPOST, post_params)
             else:
                 if isinstance(self._data, StringTypes):
-                    logger.debug(("self._data is string"))
-                    logger.debug(("self._data", self._data))
+                    #logger.debug(("self._data is string"))
+                    #logger.debug(("self._data", self._data))
                     request_buffer = StringIO(self._data)
 
                     # raw data for body request
