@@ -140,7 +140,12 @@ class GCM(object):
         elif response.status_code == 503:
             raise GCMUnavailableException("GCM service is unavailable")
 
-        return json.loads(response.content)
+        data = json.loads(response.content)
+        # !! Using human_curl throught http proxy is not closing the socket properly, the performance will decrease due the number of
+        # coonections opened.
+        # With the explicit close the socket will remain TIME_WAIT until system timeout will expire it.
+        response._curl_opener.close()
+        return data
 
     def raise_error(self, error):
         if error == 'InvalidRegistration':
