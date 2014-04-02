@@ -53,6 +53,15 @@ class GCMTest(unittest.TestCase):
         }
         time.sleep = MagicMock()
 
+    def assertIn(self, arg, payload):
+        self.assertTrue(arg in payload)
+
+    def assertNotIn(self, arg, payload):
+        self.assertTrue(arg not in payload)
+
+    def assertIsNone(self, arg):
+        self.assertTrue(arg is None)
+
     def test_construct_payload(self):
         res = self.gcm.construct_payload(
             registration_ids=['1', '2'], data=self.data, collapse_key='foo',
@@ -63,8 +72,8 @@ class GCMTest(unittest.TestCase):
             self.assertIn(arg, payload)
 
     def test_require_collapse_key(self):
-        with self.assertRaises(GCMNoCollapseKeyException):
-            self.gcm.construct_payload(registration_ids='1234', data=self.data, time_to_live=3600)
+        self.assertRaises(GCMNoCollapseKeyException, self.gcm.construct_payload,
+                          registration_ids='1234', data=self.data, time_to_live=3600)
 
     def test_json_payload(self):
         reg_ids = ['12', '145', '56']
@@ -85,26 +94,22 @@ class GCMTest(unittest.TestCase):
     def test_limit_reg_ids(self):
         reg_ids = range(1003)
         self.assertTrue(len(reg_ids) > 1000)
-        with self.assertRaises(GCMTooManyRegIdsException):
-            self.gcm.json_request(registration_ids=reg_ids, data=self.data)
+        self.assertRaises(GCMTooManyRegIdsException, self.gcm.json_request,
+                          registration_ids=reg_ids, data=self.data)
 
     def test_missing_reg_id(self):
-        with self.assertRaises(GCMMissingRegistrationException):
-            self.gcm.json_request(registration_ids=[], data=self.data)
+        self.assertRaises(GCMMissingRegistrationException, self.gcm.json_request,
+                          registration_ids=[], data=self.data)
 
-        with self.assertRaises(GCMMissingRegistrationException):
-            self.gcm.plaintext_request(registration_id=None, data=self.data)
+        self.assertRaises(GCMMissingRegistrationException, self.gcm.plaintext_request,
+                          registration_id=None, data=self.data)
 
     def test_invalid_ttl(self):
-        with self.assertRaises(GCMInvalidTtlException):
-            self.gcm.construct_payload(
-                registration_ids='1234', data=self.data, is_json=False, time_to_live=5000000
-            )
+        self.assertRaises(GCMInvalidTtlException, self.gcm.construct_payload,
+                          registration_ids='1234', data=self.data, is_json=False, time_to_live=5000000)
 
-        with self.assertRaises(GCMInvalidTtlException):
-            self.gcm.construct_payload(
-                registration_ids='1234', data=self.data, is_json=False, time_to_live=-10
-            )
+        self.assertRaises(GCMInvalidTtlException,
+                          self.gcm.construct_payload, registration_ids='1234', data=self.data, is_json=False, time_to_live=-10)
 
     def test_group_response(self):
         ids = ['123', '345', '678', '999', '1919', '5443']
@@ -155,8 +160,8 @@ class GCMTest(unittest.TestCase):
 
     def test_handle_plaintext_response(self):
         response = 'Error=NotRegistered'
-        with self.assertRaises(GCMNotRegisteredException):
-            self.gcm.handle_plaintext_response(response)
+
+        self.assertRaises(GCMNotRegisteredException, self.gcm.handle_plaintext_response, response)
 
         response = 'id=23436576'
         res = self.gcm.handle_plaintext_response(response)
@@ -179,8 +184,7 @@ class GCMTest(unittest.TestCase):
         returns = [GCMUnavailableException(), GCMUnavailableException(), GCMUnavailableException()]
 
         self.gcm.make_request = MagicMock(side_effect=create_side_effect(returns))
-        with self.assertRaises(IOError):
-            self.gcm.plaintext_request(registration_id='1234', data=self.data, retries=2)
+        self.assertRaises(IOError, self.gcm.plaintext_request, registration_id='1234', data=self.data, retries=2)
 
         self.assertEqual(self.gcm.make_request.call_count, 2)
 
