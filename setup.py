@@ -2,8 +2,8 @@ from distutils.core import setup
 
 setup(
     name='python-gcm',
-    version='0.1.4',
-    packages=['gcm', 'human_curl'],
+    version='0.1.5',
+    packages=['gcm'],
     license=open('LICENSE').read(),
     author='Minh Nam Ngo',
     author_email='nam@namis.me',
