@@ -25,6 +25,34 @@ class GCMInvalidRegistrationException(GCMException): pass
 class GCMUnavailableException(GCMException): pass
 
 
+def de_unicode_list(in_list):
+    res = []
+    for i in in_list:
+        if isinstance(i, list):
+            res.append(de_unicode_list(i))
+        elif isinstance(i, dict):
+            res.append(de_unicode_dict(i))
+        elif isinstance(i, unicode):
+            res.append(i.encode('utf-8'))
+        else:
+            res.append(i)
+    return res
+
+
+def de_unicode_dict(in_dict):
+    res = {}
+    for k, v in in_dict.iteritems():
+        if isinstance(v, list):
+            res[k] = de_unicode_list(v)
+        elif isinstance(v, dict):
+            res[k] = de_unicode_dict(v)
+        elif isinstance(v, unicode):
+            res[k] = v.encode('utf-8')
+        else:
+            res[k] = v
+    return res
+
+
 # TODO: Refactor this to be more human-readable
 def group_response(response, registration_ids, key):
     # Pair up results and reg_ids
@@ -51,27 +79,28 @@ def group_response(response, registration_ids, key):
 class GCM(object):
 
     # Timeunit is milliseconds.
-    BACKOFF_INITIAL_DELAY = 1000;
-    MAX_BACKOFF_DELAY = 1024000;
+    BACKOFF_INITIAL_DELAY = 1000
+    MAX_BACKOFF_DELAY = 1024000
 
     def __init__(self, api_key, url=GCM_URL, proxy=None):
         """ api_key : google api key
             url: url of gcm service.
             proxy: can be string "http://host:port" or dict {'https':'host:port'}
         """
-        self.api_key = api_key
-        self.url = url
+        self.api_key = api_key.encode('utf-8')
+        self.url = url.encode('utf-8')
         if proxy:
             if isinstance(proxy, basestring):
                 # from 'http://hostname:port'
                 # to ('http',('hostname', port))
                 protocol = url.split(':')[0]
                 ip, port = proxy.split('/')[-1].split(':')
-                proxy= (protocol, (ip, int(port)))
+                proxy = (protocol, (ip, int(port)))
 
         self.proxy = proxy
+
     def construct_payload(self, registration_ids, data=None, collapse_key=None,
-                            delay_while_idle=False, time_to_live=None, is_json=True):
+                          delay_while_idle=False, time_to_live=None, is_json=True):
         """
         Construct the dictionary mapping of parameters.
         Encodes the dictionary into JSON if for json requests.
@@ -128,10 +157,18 @@ class GCM(object):
             'Content-Type': 'application/json'
         }
 
+        headers = de_unicode_dict(headers)
+
         try:
-            response = requests.post(self.url, data, headers=headers, proxy=self.proxy)
+            response = requests.post(
+                self.url.encode('utf-8'),
+                data.encode('utf-8'),
+                headers=headers,
+                proxy=self.proxy.encode('utf-8'))
+
         except exceptions.CurlError:
-            raise GCMConnectionException("There was an internal error in the GCM server or in the network while trying to process the request")
+            raise GCMConnectionException(
+                "There was an internal error in the GCM server or in the network while trying to process the request")
 
         if response.status_code == 400:
             raise GCMMalformedJsonException("The request could not be parsed as JSON")
@@ -141,8 +178,8 @@ class GCM(object):
             raise GCMUnavailableException("GCM service is unavailable")
 
         data = json.loads(response.content)
-        # !! Using human_curl throught http proxy is not closing the socket properly, the performance will decrease due the number of
-        # coonections opened.
+        # !! Using human_curl throught http proxy is not closing the socket properly, the performance
+        # will decrease due the number of connections opened.
         # With the explicit close the socket will remain TIME_WAIT until system timeout will expire it.
         response._curl_opener.close()
         return data
@@ -194,7 +231,7 @@ class GCM(object):
             return []
 
     def plaintext_request(self, registration_id, data=None, collapse_key=None,
-                            delay_while_idle=False, time_to_live=None, retries=5):
+                          delay_while_idle=False, time_to_live=None, retries=5):
         """
         Makes a plaintext request to GCM servers
 
@@ -227,7 +264,7 @@ class GCM(object):
         raise IOError("Could not make request after %d attempts" % attempt)
 
     def json_request(self, registration_ids, data=None, collapse_key=None,
-                        delay_while_idle=False, time_to_live=None, retries=5):
+                     delay_while_idle=False, time_to_live=None, retries=5):
         """
         Makes a JSON request to GCM servers
 
