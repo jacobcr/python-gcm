@@ -25,34 +25,6 @@ class GCMInvalidRegistrationException(GCMException): pass
 class GCMUnavailableException(GCMException): pass
 
 
-def de_unicode_list(in_list):
-    res = []
-    for i in in_list:
-        if isinstance(i, list):
-            res.append(de_unicode_list(i))
-        elif isinstance(i, dict):
-            res.append(de_unicode_dict(i))
-        elif isinstance(i, unicode):
-            res.append(i.encode('utf-8'))
-        else:
-            res.append(i)
-    return res
-
-
-def de_unicode_dict(in_dict):
-    res = {}
-    for k, v in in_dict.iteritems():
-        if isinstance(v, list):
-            res[k] = de_unicode_list(v)
-        elif isinstance(v, dict):
-            res[k] = de_unicode_dict(v)
-        elif isinstance(v, unicode):
-            res[k] = v.encode('utf-8')
-        else:
-            res[k] = v
-    return res
-
-
 # TODO: Refactor this to be more human-readable
 def group_response(response, registration_ids, key):
     # Pair up results and reg_ids
@@ -89,11 +61,13 @@ class GCM(object):
         """
         self.api_key = api_key.encode('utf-8')
         self.url = url.encode('utf-8')
+
         if proxy:
+            proxy = proxy.encode('utf-8')
             if isinstance(proxy, basestring):
                 # from 'http://hostname:port'
                 # to ('http',('hostname', port))
-                protocol = url.split(':')[0]
+                protocol = self.url.split(':')[0]
                 ip, port = proxy.split('/')[-1].split(':')
                 proxy = (protocol, (ip, int(port)))
 
@@ -153,11 +127,9 @@ class GCM(object):
         """
 
         headers = {
-            'Authorization': 'key=%s' % self.api_key,
-            'Content-Type': 'application/json'
+            'Authorization': ('key=%s' % self.api_key).encode('utf-8'),
+            'Content-Type': ('application/json').encode('utf-8')
         }
-
-        headers = de_unicode_dict(headers)
 
         try:
             response = requests.post(
