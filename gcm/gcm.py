@@ -136,7 +136,7 @@ class GCM(object):
                 self.url.encode('utf-8'),
                 data.encode('utf-8'),
                 headers=headers,
-                proxy=self.proxy.encode('utf-8'))
+                proxy=self.proxy)
 
         except exceptions.CurlError:
             raise GCMConnectionException(
